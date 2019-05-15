@@ -105,6 +105,7 @@ int main(void)
   USART_TxWelcomeMessage();
 #endif
 	
+	#define MICROSTEPPING_MOTOR_USART_EXAMPLE
 #if defined (MICROSTEPPING_MOTOR_EXAMPLE)
   /* Perform a batch commands for X-NUCLEO-IHM02A1 */
   MicrosteppingMotor_Example_01();
@@ -121,8 +122,18 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
+#ifdef TEST_SWITCH
+		// TODO input lag since print statements
+		char buf[10];
+		sprintf(buf, "%d\n\r", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9));
+		HAL_UART_Transmit(&huart2, buf, 5, 10);
+#endif
 
-#ifdef TEST_MOTOR		
+#ifdef TEST_LED
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,GPIO_PIN_SET);
+#endif
+		
+#ifdef TEST_MOTOR
 
 		/* Check if any Application Command for L6470 has been entered by USART */
     USART_CheckAppCmd();
