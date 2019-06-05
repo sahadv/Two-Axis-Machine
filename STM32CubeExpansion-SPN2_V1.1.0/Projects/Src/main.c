@@ -36,7 +36,9 @@
 #include "example_usart.h"
 #include "stm32f4xx_hal_adc.h"
 
-#define TEST_MOTOR  //!< Comment out this line to test the ADC
+// these headers contain motor call def'ns
+#include "params.h"
+#include "xnucleoihm02a1.h"
 
 /**
   * @defgroup   MotionControl
@@ -63,11 +65,14 @@
   */
 
 //#define MICROSTEPPING_MOTOR_EXAMPLE        //!< Uncomment to performe the standalone example
-#define MICROSTEPPING_MOTOR_USART_EXAMPLE  //!< Uncomment to performe the USART example
+/* #define MICROSTEPPING_MOTOR_USART_EXAMPLE  //!< Uncomment to performe the USART example */
+// #define RISING_EDGE_POLLING_5_3
+/* #define RISING_EDGE_INTERRUPT_5_4 */
+#define TWO_AXIS_MACHINE
 #if ((defined (MICROSTEPPING_MOTOR_EXAMPLE)) && (defined (MICROSTEPPING_MOTOR_USART_EXAMPLE)))
   #error "Please select an option only!"
-#elif ((!defined (MICROSTEPPING_MOTOR_EXAMPLE)) && (!defined (MICROSTEPPING_MOTOR_USART_EXAMPLE)))
-  #error "Please select an option!"
+/* #elif ((!defined (MICROSTEPPING_MOTOR_EXAMPLE)) && (!defined (MICROSTEPPING_MOTOR_USART_EXAMPLE))) */
+  /* #error "Please select an option!" */
 #endif
 #if (defined (MICROSTEPPING_MOTOR_USART_EXAMPLE) && (!defined (NUCLEO_USE_USART)))
   #error "Please define "NUCLEO_USE_USART" in "stm32fxxx_x-nucleo-ihm02a1.h"!"
@@ -109,6 +114,7 @@ void Test_Led(void) {
 }
 
 void Rising_Edge_Polling(void) {
+    GPIO_InitTypeDef GPIO_InitStruct;
     // exercise 5 polling/interrupt gpio
     GPIO_InitStruct.Pin = GPIO_PIN_8;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
@@ -139,6 +145,7 @@ void Rising_Edge_Polling(void) {
 }
 
 void Rising_Edge_Interrupt(void) {
+    GPIO_InitTypeDef GPIO_InitStruct;
     // exercise 5 polling/interrupt gpio
     GPIO_InitStruct.Pin = GPIO_PIN_8;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
@@ -167,14 +174,10 @@ void Tests(void) {
         Test_Led();
 #endif
 
-        GPIO_InitTypeDef GPIO_InitStruct;
-
-// #define RISING_EDGE_POLLING_5_3
 #ifdef RISING_EDGE_POLLING_5_3
         Rising_Edge_Polling();
 #endif
 
-#define RISING_EDGE_INTERRUPT_5_4
 #ifdef RISING_EDGE_INTERRUPT_5_4
         Rising_Edge_Interrupt();
 #endif
@@ -198,7 +201,7 @@ int main(void)
     USART_TxWelcomeMessage();
 #endif
 
-#define MICROSTEPPING_MOTOR_USART_EXAMPLE
+/* #define MICROSTEPPING_MOTOR_USART_EXAMPLE */
 #if defined (MICROSTEPPING_MOTOR_EXAMPLE)
     /* Perform a batch commands for X-NUCLEO-IHM02A1 */
     MicrosteppingMotor_Example_01();
@@ -227,6 +230,125 @@ int main(void)
 #endif      
     }
 #elif defined(TWO_AXIS_MACHINE)
+// TODO decide pins
+#define LIM_SWITCH_1_1 GPIO_PIN_8
+#define LIM_SWITCH_1_2 GPIO_PIN_9
+#define LIM_SWITCH_2_1 GPIO_PIN_10
+#define LIM_SWITCH_2_2 GPIO_PIN_11
+#define DEFAULT_SPEED  5
+    // 
+
+    /*Initialize the motor parameters */
+    Motor_Param_Reg_Init();
+
+    /*
+     * initialize limit switch pins
+     */
+
+    GPIO_InitTypeDef GPIO_InitStruct;
+
+    GPIO_InitStruct.Pin = LIM_SWITCH_1_1;   // TODO get real pins for lim switches
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;     // TODO do we need to pull the GPIO pins?
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); // TODO are switches on GPIOA?
+
+    GPIO_InitStruct.Pin = LIM_SWITCH_1_2;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); // TODO are switches on GPIOA?
+
+    GPIO_InitStruct.Pin = LIM_SWITCH_2_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); // TODO are switches on GPIOA?
+
+    GPIO_InitStruct.Pin = LIM_SWITCH_2_2;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); // TODO are switches on GPIOA?
+
+    /* GPIO_PinState cur = GPIO_PIN_RESET, prev = GPIO_PIN_RESET; */
+    // to check pin: cur = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_2_2);
+
+    StepperMotorBoardHandle_t *StepperMotorBoardHandle;
+    MotorParameterData_t *MotorParameterDataGlobal, *MotorParameterDataSingle;
+    uint8_t board_id = EXPBRD_ID(0);    // TODO find actual id
+    uint8_t device_id_1 = L6470_ID(0);  // TODO find actual id
+    uint8_t device_id_2 = L6470_ID(1);  // TODO find actual id
+    int direction_1, direction_2;
+    uint32_t speed_1, speed_2;
+    GPIO_PinState lim_switch_1_1_state[2];
+    GPIO_PinState lim_switch_1_2_state[2];
+    GPIO_PinState lim_switch_2_1_state[2];
+    GPIO_PinState lim_switch_2_2_state[2];
+
+    // TODO figure out what this block of code really does
+    for (uint8_t id = 0; id < EXPBRD_MOUNTED_NR; id++)
+    {
+        StepperMotorBoardHandle = BSP_GetExpansionBoardHandle(EXPBRD_ID(id));
+        MotorParameterDataSingle = MotorParameterDataGlobal+(id*L6470DAISYCHAINSIZE);
+        StepperMotorBoardHandle->Config(MotorParameterDataSingle);
+    }
+
+    // test program that moves motors back and forth, checking for limits when needed
+    while (1) {
+        // update switch states
+        lim_switch_1_1_state[1] = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_1_1);
+        lim_switch_1_2_state[1] = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_1_2);
+        lim_switch_2_1_state[1] = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_2_1);
+        lim_switch_2_2_state[1] = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_2_2);
+
+        // TODO might need to use interrupts
+
+        // stop motor if needed
+        // TODO confirm directions of motor relative to switches
+        if ((lim_switch_1_1_state[1] == GPIO_PIN_SET && direction_1 == L6470_DIR_FWD_ID)
+            || (lim_switch_1_2_state[1] == GPIO_PIN_SET && direction_1 == L6470_DIR_REV_ID)) {
+            speed_1 = 0;
+        } else {
+            speed_1 = DEFAULT_SPEED;    // TODO confirm what a reasonable speed is
+        }
+        if ((lim_switch_2_1_state[1] == GPIO_PIN_SET && direction_2 == L6470_DIR_FWD_ID)
+            || (lim_switch_2_2_state[1] == GPIO_PIN_SET && direction_2 == L6470_DIR_REV_ID)) {
+            speed_2 = 0;
+        } else {
+            speed_2 = DEFAULT_SPEED;
+        }
+
+        // on a rising edge, switch direction for each motor
+        
+        // switch direction for axis 1
+        // TODO check if value is SET or RESET when the switch is pressed; i.e. are we checking for a rising edge or falling edge?
+        if (lim_switch_1_1_state[0] == GPIO_PIN_RESET && lim_switch_1_1_state[1] == GPIO_PIN_SET) {
+            direction_1 = !L6470_DIR_FWD_ID;
+        }
+        if (lim_switch_1_2_state[0] == GPIO_PIN_RESET && lim_switch_1_2_state[1] == GPIO_PIN_SET) {
+            direction_1 = !L6470_DIR_REV_ID;
+        }
+        
+        // switch direction for axis 2
+        // TODO check if value is SET or RESET when the switch is pressed; i.e. are we checking for a rising edge or falling edge?
+        if (lim_switch_2_1_state[0] == GPIO_PIN_RESET && lim_switch_2_1_state[1] == GPIO_PIN_SET) {
+            direction_2 = !L6470_DIR_FWD_ID;
+        }
+        if (lim_switch_2_2_state[0] == GPIO_PIN_RESET && lim_switch_2_2_state[1] == GPIO_PIN_SET) {
+            direction_2 = !L6470_DIR_REV_ID;
+        }
+
+        // run motors
+        StepperMotorBoardHandle->Command->Run(board_id, device_id_1, direction_1, speed_1);
+        StepperMotorBoardHandle->Command->Run(board_id, device_id_2, direction_2, speed_2);
+
+        // update old switch states
+        lim_switch_1_1_state[0] = lim_switch_1_1_state[1];
+        lim_switch_1_2_state[0] = lim_switch_1_2_state[1];
+        lim_switch_2_1_state[0] = lim_switch_2_1_state[1];
+        lim_switch_2_2_state[0] = lim_switch_2_2_state[1];
+    }
 
 #else
     Tests();
