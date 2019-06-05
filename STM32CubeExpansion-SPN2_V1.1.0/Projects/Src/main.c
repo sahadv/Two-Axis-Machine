@@ -36,7 +36,7 @@
 #include "example_usart.h"
 #include "stm32f4xx_hal_adc.h"
 
-#define TEST_MOTOR	//!< Comment out this line to test the ADC
+#define TEST_MOTOR  //!< Comment out this line to test the ADC
 
 /**
   * @defgroup   MotionControl
@@ -76,8 +76,8 @@
 /**
   * @}
   */ /* End of ExampleTypes */
-	
-	/* Private Variables ----------------------*/
+    
+    /* Private Variables ----------------------*/
 
 /* Variable used to get converted value */
 __IO uint16_t uhADCxConvertedValue = 0;
@@ -88,130 +88,148 @@ __IO uint16_t uhADCxConvertedValue = 0;
 static void Error_Handler(void);
 uint16_t Read_ADC(void);
 
+void Test_Limit_Switch(void) {
+    // TODO refactor
+    // lim switch
+    GPIO_InitTypeDef GPIO_InitStruct;
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    // TODO input lag since print statements
+    char buf[10];
+    sprintf(buf, "%d\n\r", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9));
+    HAL_UART_Transmit(&huart2, buf, 5, 10);
+}
+
+void Test_Led(void) {
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,GPIO_PIN_SET);
+}
+
+void Rising_Edge_Polling(void) {
+    // exercise 5 polling/interrupt gpio
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    // led
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); 
+
+    GPIO_PinState cur = GPIO_PIN_RESET, prev = GPIO_PIN_RESET;
+
+    while (1) {
+        cur = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+
+        if (prev == GPIO_PIN_RESET && cur == GPIO_PIN_SET) { // rising edge
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_SET);
+            // HAL_Delay(1);    // or i++ for finer control
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_RESET);
+        }
+
+        prev = cur;
+    }
+}
+
+void Rising_Edge_Interrupt(void) {
+    // exercise 5 polling/interrupt gpio
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+    // led
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct); 
+
+    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+}
+
+void Tests(void) {
+    while (1) {
+#ifdef TEST_SWITCH
+        Test_Limit_Switch();
+#endif
+
+#ifdef TEST_LED
+        Test_Led();
+#endif
+
+        GPIO_InitTypeDef GPIO_InitStruct;
+
+// #define RISING_EDGE_POLLING_5_3
+#ifdef RISING_EDGE_POLLING_5_3
+        Rising_Edge_Polling();
+#endif
+
+#define RISING_EDGE_INTERRUPT_5_4
+#ifdef RISING_EDGE_INTERRUPT_5_4
+        Rising_Edge_Interrupt();
+#endif
+    }
+}
+
 /**
   * @brief The FW main module
   */
 int main(void)
 {
-  /* NUCLEO board initialization */
-	/* Init for UART, ADC, GPIO and SPI */
-  NUCLEO_Board_Init();
-  
-  /* X-NUCLEO-IHM02A1 initialization */
-  BSP_Init();
-	
-	#ifdef NUCLEO_USE_USART
-  /* Transmit the initial message to the PC via UART */
-  USART_TxWelcomeMessage();
+    /* NUCLEO board initialization */
+    /* Init for UART, ADC, GPIO and SPI */
+    NUCLEO_Board_Init();
+
+    /* X-NUCLEO-IHM02A1 initialization */
+    BSP_Init();
+
+#ifdef NUCLEO_USE_USART
+    /* Transmit the initial message to the PC via UART */
+    USART_TxWelcomeMessage();
 #endif
-	
-	#define MICROSTEPPING_MOTOR_USART_EXAMPLE
+
+#define MICROSTEPPING_MOTOR_USART_EXAMPLE
 #if defined (MICROSTEPPING_MOTOR_EXAMPLE)
-  /* Perform a batch commands for X-NUCLEO-IHM02A1 */
-  MicrosteppingMotor_Example_01();
-  
-  /* Infinite loop */
-  while (1);
+    /* Perform a batch commands for X-NUCLEO-IHM02A1 */
+    MicrosteppingMotor_Example_01();
+
+    /* Infinite loop */
+    while (1);
 #elif defined (MICROSTEPPING_MOTOR_USART_EXAMPLE)
-  /* Fill the L6470_DaisyChainMnemonic structure */
-  Fill_L6470_DaisyChainMnemonic();
-	
-	/*Initialize the motor parameters */
-	Motor_Param_Reg_Init();
-  
-  /* Infinite loop */
-  while (1)
-  {
-#ifdef TEST_SWITCH
-			// TODO refactor
-	// lim switch
-  GPIO_InitTypeDef GPIO_InitStruct;
-	    GPIO_InitStruct.Pin = GPIO_PIN_9;
-    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-	
+    /* Fill the L6470_DaisyChainMnemonic structure */
+    Fill_L6470_DaisyChainMnemonic();
 
-		
-		// TODO input lag since print statements
-		char buf[10];
-		sprintf(buf, "%d\n\r", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9));
-		HAL_UART_Transmit(&huart2, buf, 5, 10);
-#endif
+    /*Initialize the motor parameters */
+    Motor_Param_Reg_Init();
 
-#ifdef TEST_LED
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,GPIO_PIN_SET);
-#endif
-		
-					GPIO_InitTypeDef GPIO_InitStruct;
-		
-// #define RISING_EDGE_POLLING_5_3
-#ifdef RISING_EDGE_POLLING_5_3
-			// exercise 5 polling/interrupt gpio
-		GPIO_InitStruct.Pin = GPIO_PIN_8;
-		GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-		GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
-		GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-			
-				// led
-				GPIO_InitStruct.Pin = GPIO_PIN_9;
-			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-			GPIO_InitStruct.Pull = GPIO_PULLUP;
-			GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-			HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
-			
-			GPIO_PinState cur = GPIO_PIN_RESET, prev = GPIO_PIN_RESET;
-			
-			while (1) {
-				cur = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
-				
-				if (prev == GPIO_PIN_RESET && cur == GPIO_PIN_SET) { // rising edge
-						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_SET);
-						// HAL_Delay(1);	// or i++ for finer control
-						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_RESET);
-				}
-				
-				prev = cur;
-			}
-#endif
-			
-			/* 5.3:
-			 * - 
-			 */
-			
-#define RISING_EDGE_INTERRUPT_5_4
-#ifdef RISING_EDGE_INTERRUPT_5_4
-						// exercise 5 polling/interrupt gpio
-		GPIO_InitStruct.Pin = GPIO_PIN_8;
-		GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-		GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
-		GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-			
-				// led
-				GPIO_InitStruct.Pin = GPIO_PIN_9;
-			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-			GPIO_InitStruct.Pull = GPIO_PULLUP;
-			GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-			HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
-			
-			HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
-			HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
-#endif
-		
+    /* Infinite loop */
+    while (1)
+    {
 #ifdef TEST_MOTOR
-		/* Check if any Application Command for L6470 has been entered by USART */
-    //USART_CheckAppCmd();
+        /* Check if any Application Command for L6470 has been entered by USART */
+        USART_CheckAppCmd();
 #else
-		uint16_t myADCVal;
-		myADCVal = Read_ADC();
-		USART_Transmit(&huart2, " ADC Read: ");
-	  USART_Transmit(&huart2, num2hex(myADCVal, WORD_F));
-	  USART_Transmit(&huart2, " \n\r");
-#endif		
-  }
+        uint16_t myADCVal;
+        myADCVal = Read_ADC();
+        USART_Transmit(&huart2, " ADC Read: ");
+        USART_Transmit(&huart2, num2hex(myADCVal, WORD_F));
+        USART_Transmit(&huart2, " \n\r");
+#endif      
+    }
+#elif defined(TWO_AXIS_MACHINE)
+
+#else
+    Tests();
 #endif
 }
 
