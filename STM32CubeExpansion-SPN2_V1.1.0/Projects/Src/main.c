@@ -123,6 +123,17 @@ int main(void)
   while (1)
   {
 #ifdef TEST_SWITCH
+			// TODO refactor
+	// lim switch
+  GPIO_InitTypeDef GPIO_InitStruct;
+	    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+	
+
+		
 		// TODO input lag since print statements
 		char buf[10];
 		sprintf(buf, "%d\n\r", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9));
@@ -133,13 +144,67 @@ int main(void)
 		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8,GPIO_PIN_SET);
 #endif
 		
+					GPIO_InitTypeDef GPIO_InitStruct;
+		
+// #define RISING_EDGE_POLLING_5_3
+#ifdef RISING_EDGE_POLLING_5_3
+			// exercise 5 polling/interrupt gpio
+		GPIO_InitStruct.Pin = GPIO_PIN_8;
+		GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+		GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+		GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+			
+				// led
+				GPIO_InitStruct.Pin = GPIO_PIN_9;
+			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+			GPIO_InitStruct.Pull = GPIO_PULLUP;
+			GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+			HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
+			
+			GPIO_PinState cur = GPIO_PIN_RESET, prev = GPIO_PIN_RESET;
+			
+			while (1) {
+				cur = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_8);
+				
+				if (prev == GPIO_PIN_RESET && cur == GPIO_PIN_SET) { // rising edge
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_SET);
+						// HAL_Delay(1);	// or i++ for finer control
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_RESET);
+				}
+				
+				prev = cur;
+			}
+#endif
+			
+			/* 5.3:
+			 * - 
+			 */
+			
+#define RISING_EDGE_INTERRUPT_5_4
+#ifdef RISING_EDGE_INTERRUPT_5_4
+						// exercise 5 polling/interrupt gpio
+		GPIO_InitStruct.Pin = GPIO_PIN_8;
+		GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+		GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+		GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+		HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+			
+				// led
+				GPIO_InitStruct.Pin = GPIO_PIN_9;
+			GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+			GPIO_InitStruct.Pull = GPIO_PULLUP;
+			GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+			HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);	
+			
+			HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+			HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+#endif
+		
 #ifdef TEST_MOTOR
-
 		/* Check if any Application Command for L6470 has been entered by USART */
-    USART_CheckAppCmd();
-		
+    //USART_CheckAppCmd();
 #else
-		
 		uint16_t myADCVal;
 		myADCVal = Read_ADC();
 		USART_Transmit(&huart2, " ADC Read: ");
