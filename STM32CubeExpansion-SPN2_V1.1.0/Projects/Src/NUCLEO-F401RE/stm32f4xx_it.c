@@ -117,21 +117,6 @@ void EXTI15_10_IRQHandler(void)
   }
 }
 
-// lab 2 5.3 interrupt thing
-void EXTI9_5_IRQHandler(void) {
-	if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_8) != RESET)
-  {
-								HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_SET);
-						// HAL_Delay(1);	// or i++ for finer control
-		// int i = 0;
-		 //for ( ; i < 10000; i++) {}
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9,GPIO_PIN_RESET);
-		
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_8);
-    // BSP_EmergencyStop();
-  }
-}
-
 /**
   * @}
   */ /* End of STM32F4XX_IT_Exported_Functions */
