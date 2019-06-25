@@ -75,26 +75,26 @@ void SysTick_Handler(void)
 /**
 * @brief This function handles EXTI Line1 interrupt.
 */
-void EXTI1_IRQHandler(void)
-{
-	if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_1) != RESET)
-  {
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_1);
-		BSP_L6470_FlagEventManager();
-  }
-}
+/* void EXTI1_IRQHandler(void) */
+/* { */
+    /* if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_1) != RESET) */
+  /* { */
+    /* __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_1); */
+        /* BSP_L6470_FlagEventManager(); */
+  /* } */
+/* } */
 
 /**
 * @brief This function handles EXTI Line0 interrupt.
 */
-void EXTI0_IRQHandler(void)
-{
-	if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_0) != RESET)
-  {
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0);
-    BSP_L6470_BusySynchEventManager();
-  }
-}
+/* void EXTI0_IRQHandler(void) */
+/* { */
+    /* if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_0) != RESET) */
+  /* { */
+    /* __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_0); */
+    /* BSP_L6470_BusySynchEventManager(); */
+  /* } */
+/* } */
 
 /**
 * @brief This function handles USART2 global interrupt.
@@ -108,14 +108,14 @@ void USART2_IRQHandler(void)
 /**
 * @brief This function handles EXTI Line[15:10] interrupts.
 */
-void EXTI15_10_IRQHandler(void)
-{
-	if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != RESET)
-  {
-    __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_13);
-    BSP_EmergencyStop();
-  }
-}
+/* void EXTI15_10_IRQHandler(void) */
+/* { */
+    /* if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_13) != RESET) */
+  /* { */
+    /* __HAL_GPIO_EXTI_CLEAR_IT(GPIO_PIN_13); */
+    /* BSP_EmergencyStop(); */
+  /* } */
+/* } */
 
 /**
   * @}
