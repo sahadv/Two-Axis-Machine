@@ -30,7 +30,7 @@ void lim_switch_init(void) {
     // H_L
     GPIO_InitStruct.Pin = LIM_SWITCH_H_L;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Pull = GPIO_PULLUP; // TODO
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -40,38 +40,38 @@ void lim_switch_init(void) {
     // H_R
     GPIO_InitStruct.Pin = LIM_SWITCH_H_R;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+    //HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+    //HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
     // V_T
     GPIO_InitStruct.Pin = LIM_SWITCH_V_T;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+    //HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+    //HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
     // V_B
     GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL; // TODO
+    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-    HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+    //HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+    //HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 }
 
 void EXTI9_5_IRQHandler(void) {
   if (__HAL_GPIO_EXTI_GET_IT(LIM_SWITCH_H_L) != RESET) {
-        BSP_L6470_HardStop(0, 0);
-        BSP_L6470_HardStop(0, 1);
+        BSP_L6470_SoftStop(0, 0);
+        BSP_L6470_SoftStop(0, 1);
       __HAL_GPIO_EXTI_CLEAR_IT(LIM_SWITCH_H_L);
   }
 }
@@ -152,15 +152,43 @@ int main(void)
     MotorParameterDataSingle = MotorParameterDataGlobal+(board_id*L6470DAISYCHAINSIZE);
     StepperMotorBoardHandle->Config(MotorParameterDataSingle);
 
-    speed_1 = speed_2 = 1000;
+    USART_Transmit(&huart2, "hello\r\n");
     
     // test program that moves motors back and forth, checking for limits when needed
     while (1) {
         // USART_CheckAppCmd();  // read motor commands
-      
         // run motors
-        StepperMotorBoardHandle->Command->Run(board_id, device_id_1, direction_1, speed_1);
-        StepperMotorBoardHandle->Command->Run(board_id, device_id_2, direction_2, speed_2);
+      
+        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == SET) {
+          USART_Transmit(&huart2, "HL SET\r\n");
+          speed_1 = 0;
+        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == RESET) {
+          USART_Transmit(&huart2, "HL RESET\r\n");
+          speed_1 = 10000;
+        }
+
+//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == SET) {
+//          USART_Transmit(&huart2, "HR SET\r\n");
+//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == RESET) {
+//          USART_Transmit(&huart2, "HR RESET\r\n");
+//        }
+
+//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) {
+//          USART_Transmit(&huart2, "VT SET\r\n");
+//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) {
+//          USART_Transmit(&huart2, "VT RESET\r\n");
+//        }
+//        
+//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) {
+//          USART_Transmit(&huart2, "VB SET\r\n");
+//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) {
+//          USART_Transmit(&huart2, "VB RESET\r\n");
+//        }
+        
+        //StepperMotorBoardHandle->Command->Run(board_id, device_id_1, direction_1, speed_1);
+       // StepperMotorBoardHandle->Command->Run(board_id, device_id_2, direction_2, speed_2);
+       
+       BSP_L6470_Run(0,1,0,10000);
     }
 }
 
