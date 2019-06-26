@@ -40,38 +40,38 @@ void lim_switch_init(void) {
     // H_R
     GPIO_InitStruct.Pin = LIM_SWITCH_H_R;
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
+    GPIO_InitStruct.Pull = GPIO_PULLUP; // TODO
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    //HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
-    //HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+    HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-    // V_T
-    GPIO_InitStruct.Pin = LIM_SWITCH_V_T;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    //HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-    //HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
-    // V_B
-    GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-    GPIO_InitStruct.Pull = GPIO_PULLDOWN; // TODO
-    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-    //HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-    //HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+/*
+ *     // V_T
+ *     GPIO_InitStruct.Pin = LIM_SWITCH_V_T;
+ *     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+ *     GPIO_InitStruct.Pull = GPIO_PULLUP; // TODO
+ *     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+ *     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ *
+ *     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+ *     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+ *
+ *     // V_B
+ *     GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
+ *     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+ *     GPIO_InitStruct.Pull = GPIO_PULLUP; // TODO
+ *     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+ *     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+ *
+ *     HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+ *     HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+ */
 }
 
 void EXTI9_5_IRQHandler(void) {
   if (__HAL_GPIO_EXTI_GET_IT(LIM_SWITCH_H_L) != RESET) {
-        BSP_L6470_SoftStop(0, 0);
-        BSP_L6470_SoftStop(0, 1);
       __HAL_GPIO_EXTI_CLEAR_IT(LIM_SWITCH_H_L);
   }
 }
@@ -79,8 +79,6 @@ void EXTI9_5_IRQHandler(void) {
 void EXTI0_IRQHandler(void)
 {
     if (__HAL_GPIO_EXTI_GET_IT(LIM_SWITCH_H_R) != RESET) {
-        BSP_L6470_HardStop(0, 0);
-        BSP_L6470_HardStop(0, 1);
         __HAL_GPIO_EXTI_CLEAR_IT(LIM_SWITCH_H_R);
     }
 
@@ -94,8 +92,6 @@ void EXTI0_IRQHandler(void)
 void EXTI15_10_IRQHandler(void)
 {
     if (__HAL_GPIO_EXTI_GET_IT(LIM_SWITCH_V_T) != RESET) {
-        BSP_L6470_HardStop(0, 0);
-        BSP_L6470_HardStop(0, 1);
         __HAL_GPIO_EXTI_CLEAR_IT(LIM_SWITCH_V_T);
     }
 
@@ -109,8 +105,6 @@ void EXTI15_10_IRQHandler(void)
 void EXTI1_IRQHandler(void)
 {   
     if (__HAL_GPIO_EXTI_GET_IT(LIM_SWITCH_V_B) != RESET) {
-        BSP_L6470_HardStop(0, 0);
-        BSP_L6470_HardStop(0, 1);
         __HAL_GPIO_EXTI_CLEAR_IT(LIM_SWITCH_V_B);
     }
 
@@ -141,54 +135,50 @@ int main(void)
      */
     lim_switch_init();
     
-    StepperMotorBoardHandle_t *StepperMotorBoardHandle;
-    MotorParameterData_t *MotorParameterDataGlobal, *MotorParameterDataSingle;
     uint8_t board_id = 0;
     uint8_t device_id_1 = 0;
     uint8_t device_id_2 = 1;
     uint32_t speed_1, speed_2;
 
-    StepperMotorBoardHandle = BSP_GetExpansionBoardHandle(board_id);
-    MotorParameterDataSingle = MotorParameterDataGlobal+(board_id*L6470DAISYCHAINSIZE);
-    StepperMotorBoardHandle->Config(MotorParameterDataSingle);
-
-    USART_Transmit(&huart2, "hello\r\n");
-    
     // test program that moves motors back and forth, checking for limits when needed
     while (1) {
         // USART_CheckAppCmd();  // read motor commands
         // run motors
-      
+
         if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == SET) {
-          USART_Transmit(&huart2, "HL SET\r\n");
           speed_1 = 0;
+          USART_Transmit(&huart2, "HL SET\r\n");
         } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == RESET) {
-          USART_Transmit(&huart2, "HL RESET\r\n");
           speed_1 = 10000;
+          USART_Transmit(&huart2, "HL RESET\r\n");
         }
 
-//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == SET) {
-//          USART_Transmit(&huart2, "HR SET\r\n");
-//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == RESET) {
-//          USART_Transmit(&huart2, "HR RESET\r\n");
-//        }
+       if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == SET) {
+          speed_1 = 0;
+         USART_Transmit(&huart2, "HR SET\r\n");
+       } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == RESET) {
+           speed_1 = 10000;
+         USART_Transmit(&huart2, "HR RESET\r\n");
+       }
 
-//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) {
-//          USART_Transmit(&huart2, "VT SET\r\n");
-//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) {
-//          USART_Transmit(&huart2, "VT RESET\r\n");
-//        }
-//        
-//        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) {
-//          USART_Transmit(&huart2, "VB SET\r\n");
-//        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) {
-//          USART_Transmit(&huart2, "VB RESET\r\n");
-//        }
-        
-        //StepperMotorBoardHandle->Command->Run(board_id, device_id_1, direction_1, speed_1);
-       // StepperMotorBoardHandle->Command->Run(board_id, device_id_2, direction_2, speed_2);
+       /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) { */
+           /* speed_2 = 0; */
+         /* USART_Transmit(&huart2, "VT SET\r\n"); */
+       /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) { */
+           /* speed_2 = 10000; */
+         /* USART_Transmit(&huart2, "VT RESET\r\n"); */
+       /* } */
+/*  */
+       /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) { */
+           /* speed_2 = 0; */
+         /* USART_Transmit(&huart2, "VB SET\r\n"); */
+       /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) { */
+           /* speed_2 = 10000; */
+         /* USART_Transmit(&huart2, "VB RESET\r\n"); */
+       /* } */
        
-       BSP_L6470_Run(0,1,0,10000);
+       BSP_L6470_Run(0,0,0,speed_1);
+       BSP_L6470_Run(0,1,0,speed_2);
     }
 }
 
