@@ -132,7 +132,7 @@ int main(void)
 
     // TODO include? leftovers from MICROSTEPPING_MOTOR_USART_EXAMPLE
     /* Fill the L6470_DaisyChainMnemonic structure */
-    /* Fill_L6470_DaisyChainMnemonic(); */
+    Fill_L6470_DaisyChainMnemonic();
     /*Initialize the motor parameters */
     Motor_Param_Reg_Init();
 
@@ -156,6 +156,8 @@ int main(void)
     
     // test program that moves motors back and forth, checking for limits when needed
     while (1) {
+        // USART_CheckAppCmd();  // read motor commands
+      
         // run motors
         StepperMotorBoardHandle->Command->Run(board_id, device_id_1, direction_1, speed_1);
         StepperMotorBoardHandle->Command->Run(board_id, device_id_2, direction_2, speed_2);
