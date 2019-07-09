@@ -9,7 +9,7 @@
 
 #define LIM_SWITCH_H_L GPIO_PIN_8 // PA8
 #define LIM_SWITCH_H_R GPIO_PIN_0 // PA0
-#define LIM_SWITCH_V_T GPIO_PIN_5 // PA10
+#define LIM_SWITCH_V_T GPIO_PIN_10 // PA10
 #define LIM_SWITCH_V_B GPIO_PIN_1 // PA1
 #define DEFAULT_SPEED  10000
 
@@ -41,25 +41,23 @@ void lim_switch_init(void) {
     HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-    /*
-     *     // V_T
-     *     GPIO_InitStruct.Pin = LIM_SWITCH_V_T;
-     *     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-     *     GPIO_InitStruct.Pull = GPIO_PULLUP;
-     *     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-     *     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-     *     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
-     *     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-     *
-     *     // V_B
-     *     GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
-     *     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-     *     GPIO_InitStruct.Pull = GPIO_PULLUP;
-     *     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-     *     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-     *     HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
-     *     HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-     */
+    // V_T
+    GPIO_InitStruct.Pin = LIM_SWITCH_V_T;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+
+    // V_B
+    GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 }
 
 void EXTI9_5_IRQHandler(void) {
@@ -149,21 +147,21 @@ int main(void)
             USART_Transmit(&huart2, "HR RESET\r\n");
         }
 
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) { */
-        /* speed_v = 0; */
-        /* USART_Transmit(&huart2, "VT SET\r\n"); */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) { */
-        /* speed_v = DEFAULT_SPEED; */
-        /* USART_Transmit(&huart2, "VT RESET\r\n"); */
-        /* } */
-        /*  */
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) { */
-        /* speed_v = 0; */
-        /* USART_Transmit(&huart2, "VB SET\r\n"); */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) { */
-        /* speed_v = DEFAULT_SPEED; */
-        /* USART_Transmit(&huart2, "VB RESET\r\n"); */
-        /* } */
+        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) {
+            speed_v = 0;
+            USART_Transmit(&huart2, "VT SET\r\n");
+        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) {
+            speed_v = DEFAULT_SPEED;
+            USART_Transmit(&huart2, "VT RESET\r\n");
+        }
+
+        if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) {
+            speed_v = 0;
+            USART_Transmit(&huart2, "VB SET\r\n");
+        } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) {
+            speed_v = DEFAULT_SPEED;
+            USART_Transmit(&huart2, "VB RESET\r\n");
+        }
 
         BSP_L6470_Run(0, 0, direction_h, speed_h);
         BSP_L6470_Run(0, 1, direction_v, speed_v);
