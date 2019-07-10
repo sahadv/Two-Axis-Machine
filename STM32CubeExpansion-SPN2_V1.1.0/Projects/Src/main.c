@@ -110,6 +110,58 @@ void EXTI1_IRQHandler(void)
     }
 }
 
+
+/*
+ * static void ADCx_Init(void)
+ * {
+ *   if(HAL_ADC_GetState(&hnucleo_Adc) == HAL_ADC_STATE_RESET)
+ *   {
+ *     [> ADC Config <]
+ *     hnucleo_Adc.Instance                   = NUCLEO_ADCx;
+ *     hnucleo_Adc.Init.ClockPrescaler        = ADC_CLOCKPRESCALER_PCLK_DIV4; [> (must not exceed 36MHz) <]
+ *     hnucleo_Adc.Init.Resolution            = ADC_RESOLUTION12b;
+ *     hnucleo_Adc.Init.DataAlign             = ADC_DATAALIGN_RIGHT;
+ *     hnucleo_Adc.Init.ContinuousConvMode    = DISABLE;
+ *     hnucleo_Adc.Init.DiscontinuousConvMode = DISABLE;
+ *     hnucleo_Adc.Init.ExternalTrigConvEdge  = ADC_EXTERNALTRIGCONVEDGE_NONE;
+ *     hnucleo_Adc.Init.EOCSelection          = EOC_SINGLE_CONV;
+ *     hnucleo_Adc.Init.NbrOfConversion       = 1;
+ *     hnucleo_Adc.Init.DMAContinuousRequests = DISABLE;    **************************************************
+ *
+ *     ADCx_MspInit(&hnucleo_Adc);
+ *     HAL_ADC_Init(&hnucleo_Adc);
+ *   }
+ * }
+ */
+void ADC_Init(void) {
+  ADC_ChannelConfTypeDef sConfig;
+
+  /* GPIO Ports Clock Enable */
+  __GPIOB_CLK_ENABLE();
+
+    /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
+    */
+  hadc1.Instance = ADC1;
+  // hadc1.Init.ClockPrescaler = ;
+  // hadc1.Init.Resolution = ;
+  // hadc1.Init.ScanConvMode = DISABLE;    **************************************************
+  // hadc1.Init.ContinuousConvMode = ;
+  // hadc1.Init.DiscontinuousConvMode = ;
+  // hadc1.Init.ExternalTrigConvEdge = ;
+  // hadc1.Init.DataAlign = ;
+  // hadc1.Init.NbrOfConversion = ;
+  // hadc1.Init.DMAContinuousRequests = ;
+  // hadc1.Init.EOCSelection = ;
+  HAL_ADC_Init(&hadc1);
+
+    /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
+    */
+  sConfig.Channel = ADC_CHANNEL_8;		/* Currently set to input pin PB0, adjust as needed */
+  sConfig.Rank = 1;
+  // sConfig.SamplingTime = ;
+  HAL_ADC_ConfigChannel(&hadc1, &sConfig);
+}
+
 int main(void)
 {
     /* NUCLEO board initialization */
@@ -123,6 +175,8 @@ int main(void)
     Fill_L6470_DaisyChainMnemonic();
     /*Initialize the motor parameters */
     Motor_Param_Reg_Init();
+
+    /* ADC_Init(); */
 
     /*
      * initialize limit switch pins with interrupt handlers
