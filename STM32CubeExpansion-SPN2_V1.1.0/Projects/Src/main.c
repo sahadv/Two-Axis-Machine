@@ -11,7 +11,7 @@
 #define LIM_SWITCH_H_R GPIO_PIN_0 // PA0
 #define LIM_SWITCH_V_T GPIO_PIN_10 // PA10
 #define LIM_SWITCH_V_B GPIO_PIN_1 // PA1
-#define DEFAULT_SPEED  10000
+#define DEFAULT_SPEED  15000
 
 #define NUCLEO_USE_USART
 
@@ -193,40 +193,44 @@ int main(void)
          * run motors
          */
 
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == SET) { */
-            /* speed_h = 0; */
-            /* [> USART_Transmit(&huart2, "HL SET\r\n"); <] */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == RESET) { */
-            /* speed_h = DEFAULT_SPEED; */
-            /* [> USART_Transmit(&huart2, "HL RESET\r\n"); <] */
-        /* } */
-/*  */
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == SET) { */
-            /* speed_h = 0; */
-            /* [> USART_Transmit(&huart2, "HR SET\r\n"); <] */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == RESET) { */
-            /* speed_h = DEFAULT_SPEED; */
-            /* [> USART_Transmit(&huart2, "HR RESET\r\n"); <] */
-        /* } */
-/*  */
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) { */
-            /* speed_v = 0; */
-            /* [> USART_Transmit(&huart2, "VT SET\r\n"); <] */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) { */
-            /* speed_v = DEFAULT_SPEED; */
-            /* [> USART_Transmit(&huart2, "VT RESET\r\n"); <] */
-        /* } */
-/*  */
-        /* if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) { */
-            /* speed_v = 0; */
-            /* [> USART_Transmit(&huart2, "VB SET\r\n"); <] */
-        /* } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) { */
-            /* speed_v = DEFAULT_SPEED; */
-            /* [> USART_Transmit(&huart2, "VB RESET\r\n"); <] */
-        /* } */
-/*  */
-        /* BSP_L6470_Run(0, motor_h_id, direction_h, speed_h); */
-        /* BSP_L6470_Run(0, motor_v_id, direction_v, speed_v); */
+        if (direction_h == L6470_DIR_REV_ID) {
+            if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == SET) {
+                speed_h = 0;
+                //USART_Transmit(&huart2, "HL SET\r\n");
+            } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L) == RESET) {
+                speed_h = DEFAULT_SPEED;
+                //USART_Transmit(&huart2, "HL RESET\r\n");
+            }
+        } else {
+            if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == SET) {
+                speed_h = 0;
+                USART_Transmit(&huart2, "HR SET\r\n");
+            } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R) == RESET) {
+                speed_h = DEFAULT_SPEED;
+                USART_Transmit(&huart2, "HR RESET\r\n");
+            }
+        }
+
+        if (direction_v == L6470_DIR_REV_ID) {
+            if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == SET) {
+                speed_v = 0;
+                //USART_Transmit(&huart2, "VT SET\r\n");
+            } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T) == RESET) {
+                speed_v = DEFAULT_SPEED;
+                //USART_Transmit(&huart2, "VT RESET\r\n");
+            }
+        } else {
+            if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == SET) {
+                speed_v = 0;
+                //USART_Transmit(&huart2, "VB SET\r\n");
+            } else if (HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B) == RESET) {
+                speed_v = DEFAULT_SPEED;
+                //USART_Transmit(&huart2, "VB RESET\r\n");
+            }
+        }
+
+        BSP_L6470_Run(0, motor_h_id, direction_h, speed_h);
+        BSP_L6470_Run(0, motor_v_id, direction_v, speed_v);
     }
 }
 
