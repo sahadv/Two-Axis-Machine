@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "xnucleoihm02a1.h"
 #include "example.h"
 #include "example_usart.h"
@@ -11,6 +13,7 @@
 #define LIM_SWITCH_H_R GPIO_PIN_0 // PA0
 #define LIM_SWITCH_V_T GPIO_PIN_10 // PA10
 #define LIM_SWITCH_V_B GPIO_PIN_1 // PA1
+#define ADC_PIN GPIO_PIN_0 // PC0
 #define DEFAULT_SPEED_H  15000
 #define DEFAULT_SPEED_V  20000
 
@@ -27,6 +30,8 @@ uint32_t speed_v = DEFAULT_SPEED_V;
 
 static void Error_Handler(void);
 uint16_t Read_ADC(void);
+
+uint8_t buf[15];
 
 void lim_switch_init(void) {
     GPIO_InitTypeDef GPIO_InitStruct;
@@ -66,6 +71,12 @@ void lim_switch_init(void) {
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+    
+    // ADC
+    GPIO_InitStruct.Pin = ADC_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 }
 
 void EXTI9_5_IRQHandler(void) {
@@ -150,23 +161,27 @@ void ADC_Init(void) {
     /**Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion) 
     */
   hadc1.Instance = ADC1;
-  // hadc1.Init.ClockPrescaler = ;
-  // hadc1.Init.Resolution = ;
-  // hadc1.Init.ScanConvMode = DISABLE;    **************************************************
-  // hadc1.Init.ContinuousConvMode = ;
-  // hadc1.Init.DiscontinuousConvMode = ;
-  // hadc1.Init.ExternalTrigConvEdge = ;
-  // hadc1.Init.DataAlign = ;
-  // hadc1.Init.NbrOfConversion = ;
-  // hadc1.Init.DMAContinuousRequests = ;
-  // hadc1.Init.EOCSelection = ;
+  hadc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = ENABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  // hadc1.Init.DiscontinuousConvMode = ; // discarded because ScanConvMode set to ENABLE
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 2;   // 1 channel per axis
+  hadc1.Init.DMAContinuousRequests = ENABLE;    // TODO may need to set DMA to circular mode (see following 3 lines)
+  /* ADC_MultiModeTypeDef multi; */
+  /* multi.Mode =  */
+  /* HAL_ADCEx_MultiModeConfigChannel(&hacd1,  */
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;   // EOC at end of sequence
   HAL_ADC_Init(&hadc1);
 
     /**Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time. 
     */
-  sConfig.Channel = ADC_CHANNEL_8;		/* Currently set to input pin PB0, adjust as needed */
+  sConfig.Channel = ADC_CHANNEL_10;		/* Currently set to input pin PB0, adjust as needed */
   sConfig.Rank = 1;
-  // sConfig.SamplingTime = ;
+  sConfig.SamplingTime = ADC_SAMPLETIME_84CYCLES;
+  sConfig.Offset = 1;
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 }
 
@@ -184,7 +199,7 @@ int main(void)
     /*Initialize the motor parameters */
     Motor_Param_Reg_Init();
 
-    /* ADC_Init(); */
+    ADC_Init();
 
     /*
      * initialize limit switch pins with interrupt handlers
@@ -197,6 +212,11 @@ int main(void)
     // test program that moves motors back and forth, checking for limits when needed
     while (1) {
         USART_CheckAppCmd();  // read motor commands
+
+        memset(buf, 0, sizeof(buf));
+        num2str(Read_ADC(), buf);
+        USART_Transmit(&huart2, buf);
+        USART_Transmit(&huart2, "\r\n");
 
         BSP_L6470_Run(0, motor_h_id, direction_h, speed_h);
         BSP_L6470_Run(0, motor_v_id, direction_v, speed_v);
