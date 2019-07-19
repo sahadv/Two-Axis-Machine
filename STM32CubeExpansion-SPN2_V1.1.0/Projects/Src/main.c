@@ -185,6 +185,18 @@ void ADC_Init(void) {
   HAL_ADC_ConfigChannel(&hadc1, &sConfig);
 }
 
+int GetCalibratedADC(uint32_t uncalibrated) {
+    return 4095*(uncalibrated-94)/(3366-94);
+}
+
+int GetSpeedFromCalibratedADC(uint32_t calibrated) {
+    return (80000*calibrated)/4095-40000;
+}
+
+uint32_t GetSpeedFromUncalibratedADC(uint32_t uncalibrated) {
+    return GetSpeedFromCalibratedADC(GetCalibratedADC(uncalibrated));
+}
+
 int main(void)
 {
     /* NUCLEO board initialization */
