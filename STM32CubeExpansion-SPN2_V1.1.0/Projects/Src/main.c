@@ -12,7 +12,7 @@
 
 #define LIM_SWITCH_H_L GPIO_PIN_8 // PA8
 #define LIM_SWITCH_H_R GPIO_PIN_0 // PA0
-#define LIM_SWITCH_V_T GPIO_PIN_10 // PA10
+#define LIM_SWITCH_V_T GPIO_PIN_5 // PB5
 #define LIM_SWITCH_V_B GPIO_PIN_1 // PA1
 #define DEFAULT_SPEED_H  15000
 #define DEFAULT_SPEED_V  20000
@@ -28,7 +28,7 @@
 
 /* #define USING_V_AXIS */
 #ifdef USING_V_AXIS
-#define ADC_V_PIN GPIO_PIN_0 // TODO change to something else if doing bonus
+#define ADC_V_PIN GPIO_PIN_1 // PC1
 #define POT_V_ACTUAL_MIN 94
 #define POT_V_ACTUAL_MAX 3366
 #define MOTOR_V_MIN -40000
@@ -45,7 +45,7 @@ int8_t motor_v_id = 1;
 int32_t speed_h = DEFAULT_SPEED_H;
 int32_t speed_v = DEFAULT_SPEED_V;
 
-ADC_HandleTypeDef adc1, adc2;
+ADC_HandleTypeDef adc;
 
 static void Error_Handler(void);
 uint16_t Read_ADC(ADC_HandleTypeDef *hadc);
@@ -56,6 +56,7 @@ void lim_switch_init(void) {
     GPIO_InitTypeDef GPIO_InitStruct;
 
     __GPIOA_CLK_ENABLE();
+    __GPIOB_CLK_ENABLE();
     __GPIOC_CLK_ENABLE();
 
     // H_L
@@ -77,7 +78,7 @@ void lim_switch_init(void) {
     GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
     GPIO_InitStruct.Pull = GPIO_PULLUP;
     GPIO_InitStruct.Speed = GPIO_SPEED_HIGH;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
     // V_B
     GPIO_InitStruct.Pin = LIM_SWITCH_V_B;
@@ -103,40 +104,30 @@ void lim_switch_init(void) {
 void ADC_Init(void) {
     ADC_ChannelConfTypeDef sConfig;
 
-    adc1.Instance = ADC1;
-    adc1.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV4;
-    adc1.Init.Resolution = ADC_RESOLUTION_12B;
-    adc1.Init.ScanConvMode = ENABLE;
-    adc1.Init.ContinuousConvMode = ENABLE;
-    adc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    adc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-    adc1.Init.NbrOfConversion = 2;
-    adc1.Init.DMAContinuousRequests = ENABLE;
-    adc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
-    HAL_ADC_Init(&adc1);
+    adc.Instance = ADC1;
+    adc.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV4;
+    adc.Init.Resolution = ADC_RESOLUTION_12B;
+    adc.Init.ScanConvMode = ENABLE;
+    adc.Init.ContinuousConvMode = ENABLE;
+    adc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+    adc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+    adc.Init.NbrOfConversion = 2;
+    adc.Init.DMAContinuousRequests = ENABLE;
+    adc.Init.EOCSelection = ADC_EOC_SEQ_CONV;
+    HAL_ADC_Init(&adc);
+  
     sConfig.Channel = ADC_CHANNEL_10;
     sConfig.Rank = 1;
     sConfig.SamplingTime = ADC_SAMPLETIME_84CYCLES;
     sConfig.Offset = 1;
-    HAL_ADC_ConfigChannel(&adc1, &sConfig);
+    HAL_ADC_ConfigChannel(&adc, &sConfig);
 
 #ifdef USING_V_AXIS
-    adc2.Instance = ADC1;
-    adc2.Init.ClockPrescaler = ADC_CLOCKPRESCALER_PCLK_DIV4;
-    adc2.Init.Resolution = ADC_RESOLUTION_12B;
-    adc2.Init.ScanConvMode = ENABLE;
-    adc2.Init.ContinuousConvMode = ENABLE;
-    adc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
-    adc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-    adc2.Init.NbrOfConversion = 2;
-    adc2.Init.DMAContinuousRequests = ENABLE;
-    adc2.Init.EOCSelection = ADC_EOC_SEQ_CONV;
-    HAL_ADC_Init(&adc2);
-    sConfig.Channel = ADC_CHANNEL_10;   // TODO if bonus then change channel to something else
-    sConfig.Rank = 1;
+    sConfig.Channel = ADC_CHANNEL_11;
+    sConfig.Rank = 2;
     sConfig.SamplingTime = ADC_SAMPLETIME_84CYCLES;
     sConfig.Offset = 1;
-    HAL_ADC_ConfigChannel(&adc2, &sConfig);
+    HAL_ADC_ConfigChannel(&adc, &sConfig);
 #endif
 }
 
@@ -165,10 +156,10 @@ int main(void)
     speed_v = DEFAULT_SPEED_V;
   
     while (1) {
-        uint16_t adc1_val = Read_ADC(&adc1);
+        uint16_t adc1_val = Read_ADC(&adc);
         int switch_hr = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R);
         int switch_hl = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L);
-        /* speed_h = map(Read_ADC(&adc1), */
+        /* speed_h = map(Read_ADC(&adc), */
                       /* POT_H_ACTUAL_MIN, */
                       /* POT_H_ACTUAL_MAX, */
                       /* MOTOR_H_MIN, */
@@ -183,8 +174,8 @@ int main(void)
         BSP_L6470_Run(0, motor_h_id, direction_h, abs(speed_h));
 
 #ifdef USING_V_AXIS
-        uint16_t adc2_val = Read_ADC(&adc2);
-        int switch_vt = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_T);
+        uint16_t adc2_val = Read_ADC(&adc);
+        int switch_vt = HAL_GPIO_ReadPin(GPIOB, LIM_SWITCH_V_T);
         int switch_vb = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B);
         /* speed_v = map(Read_ADC(&adc2), */
                       /* POT_V_ACTUAL_MIN, */
@@ -198,15 +189,15 @@ int main(void)
             || (direction_v == L6470_DIR_REV_ID && switch_vb != RESET)) {
             speed_v = 0;
         }
-        BSP_L6470_Run(0, motor_v_id, direction_v, abs(speed_v));
+       // BSP_L6470_Run(0, motor_v_id, direction_v, abs(speed_v));
 #endif
 
         memset(buf, 0, sizeof(buf));
 #ifdef USING_V_AXIS
-        sprintf(buf, "adc1: %5d | motor h: %5d | left: %d | right: %d | "
+        sprintf(buf, "adc1: %5d | motor h: %5d | left: %d | right: %d |---| "
                 "adc2: %5d | motor v: %5d | top: %d | bot: %d\r\n",
                 adc1_val, speed_h, switch_hl, switch_hr,
-                adc2_val, speed_v, switch_vl, switch_vr);
+                adc2_val, speed_v, switch_vt, switch_vb);
 #else
         sprintf(buf, "adc1: %5d | motor h: %5d | left: %d | right: %d\r\n",
                 adc1_val, speed_h, switch_hl, switch_hr);
