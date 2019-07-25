@@ -14,7 +14,7 @@
 #define LIM_SWITCH_H_R GPIO_PIN_0 // PA0
 #define LIM_SWITCH_V_T GPIO_PIN_5 // PB5
 #define LIM_SWITCH_V_B GPIO_PIN_1 // PA1
-#define DEFAULT_SPEED_H  15000
+#define DEFAULT_SPEED_H  20000
 #define DEFAULT_SPEED_V  20000
 
 #define NUCLEO_USE_USART
@@ -131,10 +131,6 @@ void ADC_Init(void) {
 #endif
 }
 
-int32_t map(int32_t val, int32_t lo, int32_t hi, int32_t new_lo, int32_t new_hi) {
-    return (float) (val - lo) / (hi - lo) * (new_hi - new_lo) + new_lo;
-}
-
 int main(void)
 {
     /* NUCLEO board initialization */
@@ -159,11 +155,6 @@ int main(void)
         uint16_t adc1_val = Read_ADC(&adc);
         int switch_hr = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_R);
         int switch_hl = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_H_L);
-        /* speed_h = map(Read_ADC(&adc), */
-                      /* POT_H_ACTUAL_MIN, */
-                      /* POT_H_ACTUAL_MAX, */
-                      /* MOTOR_H_MIN, */
-                      /* MOTOR_H_MAX); */
         speed_h = SpeedFilteringWithADCValue(adc1_val);
         direction_h = (speed_h < 0) ? L6470_DIR_REV_ID : L6470_DIR_FWD_ID;
         if (abs(speed_h) < MOTOR_H_DEADBAND
@@ -177,11 +168,6 @@ int main(void)
         uint16_t adc2_val = Read_ADC(&adc);
         int switch_vt = HAL_GPIO_ReadPin(GPIOB, LIM_SWITCH_V_T);
         int switch_vb = HAL_GPIO_ReadPin(GPIOA, LIM_SWITCH_V_B);
-        /* speed_v = map(Read_ADC(&adc2), */
-                      /* POT_V_ACTUAL_MIN, */
-                      /* POT_V_ACTUAL_MAX, */
-                      /* MOTOR_V_MIN, */
-                      /* MOTOR_V_MAX); */
         speed_v = SpeedFilteringWithADCValue(adc2_val);
         direction_v = (speed_v < 0) ? L6470_DIR_REV_ID : L6470_DIR_FWD_ID;
         if (abs(speed_v) < MOTOR_V_DEADBAND
@@ -189,7 +175,7 @@ int main(void)
             || (direction_v == L6470_DIR_REV_ID && switch_vb != RESET)) {
             speed_v = 0;
         }
-       // BSP_L6470_Run(0, motor_v_id, direction_v, abs(speed_v));
+        BSP_L6470_Run(0, motor_v_id, direction_v, abs(speed_v));
 #endif
 
         memset(buf, 0, sizeof(buf));
@@ -211,6 +197,7 @@ int32_t SpeedFilteringWithADCValue(int32_t adc) {
   else if (adc > 3000) return 20000;
   else return 0;
 }
+
 static void Error_Handler(void) {
     /* Turn LED2 on */
     BSP_LED_On(LED2);
